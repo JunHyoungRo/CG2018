@@ -18,6 +18,7 @@ class OBJReader
 public:
 	std::vector<Vector3<float> > pos_stack_;
 	std::vector<Vector3<unsigned int> > ix_stack_;
+	Vector3<float> center;
 	//Note: vector push_back is slow
 	//Note: use unsigned int for indices
 
@@ -158,19 +159,38 @@ public:
 		const float y_length = max.y_ - min.y_;// of bounding box
 		const float z_length = max.z_ - min.z_;// of bounding box
 		vector<float> sss = { x_length, y_length, z_length };
+		
 		std::sort(sss.begin(), sss.end());
 		const float max_length = sss.back();
 		
 		// scale down make largest length to be one
 
 
+
+		Vector3<float> min2(max_limit, max_limit, max_limit);
+		Vector3<float> max2(min_limit, min_limit, min_limit);
 		// scale down the BB to a unit cube
 		for (int i = 0; i < pos_stack_.size(); i++)
 		{
 			pos_stack_[i].x_ /= max_length;
 			pos_stack_[i].y_ /= max_length;
 			pos_stack_[i].z_ /= max_length;
+			max2.x_ = std::max(max2.x_, pos_stack_[i].x_);
+			max2.y_ = std::max(max2.y_, pos_stack_[i].y_);
+			max2.z_ = std::max(max2.z_, pos_stack_[i].z_);
+			min2.x_ = std::min(min2.x_, pos_stack_[i].x_);
+			min2.y_ = std::min(min2.y_, pos_stack_[i].y_);
+			min2.z_ = std::min(min2.z_, pos_stack_[i].z_);
 		}
+
+		this->center = { (max2.x_ - min2.x_)/2, (max2.y_ - min2.y_)/2, (max2.z_ - min2.z_)/2 };
+		for (int i = 0; i < pos_stack_.size(); i++)
+		{
+			pos_stack_[i].x_ += center.x_;
+			pos_stack_[i].y_ += center.y_;
+			pos_stack_[i].z_ -= center.z_;
+		}
+		
 	}
 
 	void dump()

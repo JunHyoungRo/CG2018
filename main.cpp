@@ -149,16 +149,16 @@ int main(void)
 	// Create and compile our GLSL program from the shaders
 	GLuint programID = LoadShaders("SimpleVertexShader.glsl", "SimpleFragmentShader.glsl");
 
-	Box box(0.4);
+	//Box box(0.4);
 	float deg = 0;
 	OBJReader obj_reader;
 	obj_reader.readObj("../Dragon.obj");
 
 
-	GLuint box_buffer;
-	glGenBuffers(1, &box_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, box_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(box.verticies), box.verticies, GL_STATIC_DRAW);
+	// GLuint box_buffer;
+	// glGenBuffers(1, &box_buffer);
+	// glBindBuffer(GL_ARRAY_BUFFER, box_buffer);
+	// glBufferData(GL_ARRAY_BUFFER, sizeof(box.verticies), box.verticies, GL_STATIC_DRAW);
 
 	GLuint dragon_buffer; 
 	glGenBuffers(1, &dragon_buffer); //버퍼생성
@@ -166,11 +166,9 @@ int main(void)
 	glBufferData(GL_ARRAY_BUFFER, obj_reader.pos_stack_.size() *sizeof(float)*3,
 	&obj_reader.pos_stack_[0],GL_STATIC_DRAW);
 
-
-
 	do {
 		glEnable(GL_DEPTH_TEST);
-		deg+=3;
+		deg+=1;
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -186,17 +184,19 @@ int main(void)
 
 		// Camera matrix
 		glm::mat4 View = glm::lookAt(
-			glm::vec3(0.5, 0.5, 3), // Camera is at (4,3,3), in World Space
-			glm::vec3(0.5, 0.5, 0), // and looks at the origin
+			glm::vec3(0, 0, 3), // Camera is at (4,3,3), in World Space
+			glm::vec3(0, 0, 0), // and looks at the origin
 			glm::vec3(0, 1, 0)  // Head is up (set to 0,-1,0 to look upside-down)
 		);
 
 
 		glm::mat4 Model = glm::mat4(1.0f);
-		Model[0][0] = cos(degree_2_rad(deg));
-		Model[0][1] = -sin(degree_2_rad(deg));
-		Model[1][0] = sin(degree_2_rad(deg));
-		Model[1][1] = cos(degree_2_rad(deg));
+		//Model = glm::translate(Model, glm::vec3(obj_reader.center.x_, obj_reader.center.y_, -obj_reader.center.z_));
+		glm::mat4 z_rot = glm::mat4(1.0f);
+		z_rot[0][0] = cos(degree_2_rad(deg));
+		z_rot[0][1] = -sin(degree_2_rad(deg));
+		z_rot[1][0] = sin(degree_2_rad(deg));
+		z_rot[1][1] = cos(degree_2_rad(deg));
 		
 		glm::mat4 x_rot = glm::mat4(1.0f);
 		x_rot[1][1] = cos(degree_2_rad(deg*0.5));
@@ -210,7 +210,17 @@ int main(void)
 		y_rot[2][0] = -sin(degree_2_rad(deg*0.9));
 		y_rot[2][2] = cos(degree_2_rad(deg*0.9));
 
-		Model = Model*x_rot*y_rot;
+		Model = Model*x_rot*y_rot*z_rot;
+		//Model = Model*glm::mat4(1.0f);
+		
+		
+		// glm::mat4 translate(1.0f);
+		// translate[0][3] = -obj_reader.center.x_;
+		// translate[1][3] = -obj_reader.center.y_;
+		// translate[2][3] = -obj_reader.center.z_;
+		
+		//glm::mat4 mymat4x4 = glm::translate(trans);
+		//Model = Model*translate;
 
 		glm::mat4 MVP = Projection * View * Model;
 
@@ -218,20 +228,20 @@ int main(void)
 
 		
 		
+		// glEnableVertexAttribArray(0);
+		// glBindBuffer(GL_ARRAY_BUFFER, box_buffer);
+		// glVertexAttribPointer(
+		// 	0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+		// 	3,                  // size
+		// 	GL_FLOAT,           // type
+		// 	GL_FALSE,           // normalized?
+		// 	0,                  // stride
+		// 	(void*)0            // array buffer offset
+		// );
+		// glDrawArrays(GL_TRIANGLES, 0, 36); // 6 vertices
+
+
 		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, box_buffer);
-		glVertexAttribPointer(
-			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
-		glDrawArrays(GL_TRIANGLES, 0, 36); // 6 vertices
-
-
-	glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, dragon_buffer);
 		glVertexAttribPointer
 		(
@@ -242,7 +252,7 @@ int main(void)
 			0,                  // stride
 			(void*)0            // array buffer offset
 		);
-		glDrawArrays(GL_TRIANGLES, 0, obj_reader.pos_stack_.size()); // 6 vertices
+		glDrawArrays(GL_LINES, 0, obj_reader.pos_stack_.size()); // 6 vertices
 		
 		// Draw the triangle !
 		
@@ -257,7 +267,7 @@ int main(void)
 		glfwWindowShouldClose(window) == 0);
 
 	// Cleanup VBO
-	glDeleteBuffers(1, &box_buffer);
+	glDeleteBuffers(1, &dragon_buffer);
 	glDeleteVertexArrays(1, &VertexArrayID);
 	glDeleteProgram(programID);
 
