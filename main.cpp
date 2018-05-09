@@ -1,24 +1,29 @@
 
-/*
-
-http://www.opengl-tutorial.org/beginners-tutorials/
-https://github.com/opengl-tutorials/ogl
-
-*/
-
-// Include standard headers
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
+//#include <GL/GLU.h>
+#include <cstring>
+#include <stdlib.h>		  // srand, rand
+#include <thread>         // std::this_thread::sleep_for
+#include <chrono>         // std::chrono::seconds
+#include <iostream>
+#include "math.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <vector>
+#include "Matrix4.h"
+#include <fstream>
+#include <string>
+#include <sstream>
+#include "Vector3.h"
+#include "ObjReader.h"
+#include "shader.hpp"
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
-
-// Include GLEW
 #include <GL/glew.h>
-
-// Include GLFW
 #include <GLFW/glfw3.h>
 GLFWwindow* window;
-
-// Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -50,12 +55,9 @@ public:
 		verticies[0] = vec3(s, s, -s);
 		verticies[1] = vec3(-s, -s, -s);
 		verticies[2] = vec3(-s, s, -s);
-
 		verticies[3] = vec3(s, s, -s);
 		verticies[4] = vec3(s, -s, -s);
 		verticies[5] = vec3(-s, -s, -s);
-		
-
 		verticies[6] = vec3(s, s, s);
 		verticies[7] = vec3(-s, s, s);
 		verticies[8] = vec3(-s, -s, s);
@@ -87,23 +89,6 @@ public:
 		verticies[34] = vec3(-s, -s, -s);
 		verticies[35] = vec3(-s, -s, s);
 
-		indicies.push_back(vec3(0, 2, 1));
-		indicies.push_back(vec3(0, 3, 2));
-
-		indicies.push_back(vec3(4, 5, 6));
-		indicies.push_back(vec3(4, 6, 7));
-
-		indicies.push_back(vec3(0, 1, 5));
-		indicies.push_back(vec3(0, 5, 4));
-
-		indicies.push_back(vec3(3, 6, 2));
-		indicies.push_back(vec3(3, 7, 6));
-
-		indicies.push_back(vec3(0, 4, 7));
-		indicies.push_back(vec3(0, 7, 3));
-
-		indicies.push_back(vec3(1, 2, 5));
-		indicies.push_back(vec3(5, 2, 6));
 	};
 	~Box() {};
 
@@ -111,7 +96,7 @@ private:
 
 };
 
-float degree_2_rad(int deg) {
+float degree_2_rad(float deg) {
 	return (3.141592 / 180)*deg;
 }
 
@@ -162,42 +147,30 @@ int main(void)
 	glBindVertexArray(VertexArrayID);
 
 	// Create and compile our GLSL program from the shaders
-	GLuint programID = LoadShaders("SimpleVertexShader.vertexshader", "SimpleFragmentShader.fragmentshader");
-
-	const GLfloat triangle_vertices[] = {
-		0.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		0.5f,  1.0f, 0.0f,
-	};
-
-	const GLfloat square_vertices[] = {
-		0.0f, 0.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
-		1.0f, 1.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,
-	};
+	GLuint programID = LoadShaders("SimpleVertexShader.glsl", "SimpleFragmentShader.glsl");
 
 	Box box(0.4);
-	int deg = 0;
+	float deg = 0;
+	OBJReader obj_reader;
+	obj_reader.readObj("../Dragon.obj");
+
 
 	GLuint box_buffer;
 	glGenBuffers(1, &box_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, box_buffer);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(box.verticies), box.verticies, GL_STATIC_DRAW);
 
-	vec3 color_buf[36];
-	for (int i = 0; i < 36; i++) {
-		color_buf[i] = box.verticies[i];
-	}
-	GLuint color_buffer;
-	glGenBuffers(1, &color_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, color_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(color_buf), color_buf, GL_STATIC_DRAW);
+	GLuint dragon_buffer; 
+	glGenBuffers(1, &dragon_buffer); //버퍼생성
+	glBindBuffer(GL_ARRAY_BUFFER, dragon_buffer);
+	glBufferData(GL_ARRAY_BUFFER, obj_reader.pos_stack_.size() *sizeof(float)*3,
+	&obj_reader.pos_stack_[0],GL_STATIC_DRAW);
+
 
 
 	do {
 		glEnable(GL_DEPTH_TEST);
-		deg++;
+		deg+=3;
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
@@ -243,19 +216,8 @@ int main(void)
 
 		glUniformMatrix4fv(MatrixID, 1, GL_FALSE, &MVP[0][0]);
 
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, color_buffer);
-		glVertexAttribPointer(
-			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
-			3,                  // size
-			GL_FLOAT,           // type
-			GL_FALSE,           // normalized?
-			0,                  // stride
-			(void*)0            // array buffer offset
-		);
-
-
-		// 1rst attribute buffer : vertices
+		
+		
 		glEnableVertexAttribArray(0);
 		glBindBuffer(GL_ARRAY_BUFFER, box_buffer);
 		glVertexAttribPointer(
@@ -266,14 +228,24 @@ int main(void)
 			0,                  // stride
 			(void*)0            // array buffer offset
 		);
-
-		// Draw the triangle !
 		glDrawArrays(GL_TRIANGLES, 0, 36); // 6 vertices
 
 
+	glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, dragon_buffer);
+		glVertexAttribPointer
+		(
+			0,                  // attribute 0. No particular reason for 0, but must match the layout in the shader.
+			3,                  // size 
+			GL_FLOAT,           // type
+			GL_FALSE,           // normalized?
+			0,                  // stride
+			(void*)0            // array buffer offset
+		);
+		glDrawArrays(GL_TRIANGLES, 0, obj_reader.pos_stack_.size()); // 6 vertices
 		
-
-
+		// Draw the triangle !
+		
 		glDisableVertexAttribArray(0);
 
 		// Swap buffers
